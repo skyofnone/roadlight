@@ -1,0 +1,9 @@
+*.dep
+*.elf
+*.ls
+*.map
+*.s19
+*.sm8
+*.wdb
+*.wed
+*.o
