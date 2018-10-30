@@ -12,7 +12,7 @@
 #define   PB1_PIN           	GPIO_PIN_1 //电流保护
 #define   PB2_PORT           	GPIOB
 #define   PB2_PIN           	GPIO_PIN_2 //电流保护备用
-#define   IrInPort				GPIOC//GPIOE
+#define   IrInPort				GPIOE
 #define   IrInPin				GPIO_PIN_5 //GPIO_PIN_1////IR数据接收
 #define   IrDataIn             	GPIOE->IDR &= (uint8_t)(0x20)//GPIOC->IDR &= (uint8_t)(0x01)// 
 

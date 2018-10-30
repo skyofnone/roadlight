@@ -37,10 +37,6 @@
 #include "stm8s_uart1.h"
 
 
-#define LED_GPIOC_PORT  (GPIOC)
-#define LED_GPIOC_PINS  (GPIO_PIN_6 | GPIO_PIN_2 | GPIO_PIN_1 | GPIO_PIN_5 | GPIO_PIN_7 | GPIO_PIN_3 | GPIO_PIN_4)
-#define LED_GPIOD_PORT  (GPIOD)
-#define LED_GPIOD_PINS  (GPIO_PIN_6 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_5 | GPIO_PIN_7 | GPIO_PIN_0)
 #define PWM_GPIOC_PORT  (GPIOC)
 #define PWM_GPIOC_PINS  (GPIO_PIN_4 | GPIO_PIN_3)
 #define RTC_GPIOB_PORT  (GPIOB)
@@ -91,8 +87,6 @@ void System_Process_10uS(void);
 void GPIO_InitRemoterPower(void);
 
 
-
-
 /* Private defines -----------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -110,50 +104,47 @@ void TIMER1_Init(void)
 	TIM1->EGR|=0x20;//重新初始化TIM1
 	TIM1->PSCRH=0; //预分频 设置PWM频率
 	TIM1->PSCRL=0;
-	TIM1->ARRH=0x02; //设定重装载值
-	TIM1->ARRL=0x9F;
-	TIM1->CR1=0x80;//边沿对齐,向上计数,带缓冲
-	TIM1->RCR=0x01;//重复计数器
+	TIM1->ARRH=0x1F; //设定重装载值
+	TIM1->ARRL=0xFF;
+	TIM1->CR1&=0x8F;//边沿对齐,向上计数,带缓冲
+	//TIM1->RCR=0x01;//重复计数器
 	TIM1->CCMR4=0x68;//PWM模式1 通道2PWM输出
-	TIM1->CCER2=0x10;//高电平有效，开启输出
-	TIM1->CCR4H=0;//设置占空比
-	TIM1->CCR4L=0X03;
-	//TIM1_ITConfig(TIM2_IT_UPDATE, ENABLE);
-	TIM1->BKR=0x80;//主使能
+	TIM1->CCER2 &=0x1F;//高电平有效，开启输出
+	TIM1->OISR |= 0x40;
+	TIM1->CCER2 |=0x10;
+	TIM1->CCR4H=0x08;//设置占空比
+	TIM1->CCR4L=0xFF;
+
 	TIM1->CR1|=0x01;//计数使能
+	TIM1->BKR=0x80;//主使能
 
 
 }
+
+
 void GPIO_InitRemoterPower()
 {
-	GPIO_Init(LED_GPIOC_PORT, (GPIO_Pin_TypeDef)LED_GPIOC_PINS, GPIO_MODE_OUT_PP_LOW_FAST);
-	GPIO_Init(LED_GPIOD_PORT, (GPIO_Pin_TypeDef)LED_GPIOD_PINS, GPIO_MODE_OUT_PP_LOW_FAST); //LED 初始化
+	GPIO_Init(PWM_GPIOC_PORT, (GPIO_Pin_TypeDef)PWM_GPIOC_PINS, GPIO_MODE_OUT_PP_LOW_FAST);
 	GPIO_Init(RTC_GPIOB_PORT, (GPIO_Pin_TypeDef)RTC_GPIOB_PINS, GPIO_MODE_OUT_PP_LOW_FAST);
 	GPIO_Init(GPIOB, (GPIO_Pin_TypeDef)GPIO_PIN_5, GPIO_MODE_OUT_OD_LOW_FAST);
 	GPIO_Init(IrInPort, IrInPin, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(DATAOUT_GPIOB_PORT, DATAOUT_GPIOB_PIN, GPIO_MODE_OUT_PP_LOW_FAST); //数据输出初始化
 }
-
- //相关的IO口设为上拉输出
-void spi_gpio_init(void)
- {
-	 GPIO_DeInit(GPIOC);
-	 GPIO_Init(GPIOC,GPIO_PIN_5|GPIO_PIN_6,GPIO_MODE_OUT_PP_LOW_FAST);
-	 GPIO_DeInit(GPIOE);
-	 GPIO_Init(GPIOE,GPIO_PIN_5,GPIO_MODE_OUT_PP_LOW_FAST);
- }
 
 void main(void)
 {	
 	uint8_t* ucCurtime;
 	uint16_t temp = 0;
-	CLK_HSIPrescalerConfig(CLK_PRESCALER_CPUDIV16);//设置为内部高速时钟
+	CLK_DeInit();
+	CLK_HSIPrescalerConfig(CLK_PRESCALER_CPUDIV16);//设置为内部高速时钟 //0x84 00 f_HSI =f_HSI   100 f_CPU =f_MASTER /16=1M
 	GPIO_InitRemoterPower();
 	ucCurtime = ucDeftime;
-	HT1380SetTime(ucCurtime);
-	Init_TIM2();
+	//HT1380SetTime(ucCurtime);
+	//Init_TIM2();
+	
 	TIMER1_Init(); //PWM输出
+	//TIM1_init();
 	enableInterrupts();
+	while(1);
 #if 0
 	UART1->CR1 = 0x00; //8bit
 	UART1->CR3 = 0x00;//1 stop bit
