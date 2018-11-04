@@ -41,6 +41,9 @@
 #define PWM_GPIOC_PINS  (GPIO_PIN_4 | GPIO_PIN_3)
 #define RTC_GPIOB_PORT  (GPIOB)
 #define RTC_GPIOB_PINS  (GPIO_PIN_4 | GPIO_PIN_6)
+#define IR_GPIOE_PORT   (GPIOE)
+#define IR_GPIOE_PINS   (GPIO_PIN_5)
+
 #define DATAOUT_GPIOB_PORT  (GPIOB)
 #define DATAOUT_GPIOB_PIN  GPIO_PIN_0
 
@@ -52,7 +55,6 @@
 #define CCR2_Val ((u16)1535)
 #define CCR3_Val ((u16)1023)
 #define CCR4_Val ((u16)511)
-
 
 
 u16 Cnt_system_ms = 0;
@@ -121,13 +123,18 @@ void TIMER1_Init(void)
 
 }
 
-
 void GPIO_InitRemoterPower()
 {
 	GPIO_Init(PWM_GPIOC_PORT, (GPIO_Pin_TypeDef)PWM_GPIOC_PINS, GPIO_MODE_OUT_PP_LOW_FAST);
 	GPIO_Init(RTC_GPIOB_PORT, (GPIO_Pin_TypeDef)RTC_GPIOB_PINS, GPIO_MODE_OUT_PP_LOW_FAST);
 	GPIO_Init(GPIOB, (GPIO_Pin_TypeDef)GPIO_PIN_5, GPIO_MODE_OUT_OD_LOW_FAST);
-	GPIO_Init(IrInPort, IrInPin, GPIO_MODE_IN_PU_NO_IT);
+	GPIO_Init(IrInPort, (GPIO_Pin_TypeDef)IrInPin, GPIO_MODE_IN_PU_IT);
+}
+
+void IR_Int(void)
+{
+	EXTI->CR2 &= 0xFC; 
+	EXTI->CR2 |= 0x3; 
 }
 
 void main(void)
@@ -138,11 +145,11 @@ void main(void)
 	CLK_HSIPrescalerConfig(CLK_PRESCALER_CPUDIV16);//设置为内部高速时钟 //0x84 00 f_HSI =f_HSI   100 f_CPU =f_MASTER /16=1M
 	GPIO_InitRemoterPower();
 	ucCurtime = ucDeftime;
-	//HT1380SetTime(ucCurtime);
-	//Init_TIM2();
-	
+	HT1380SetTime(ucCurtime);
+	Init_TIM2();
+	IR_Int();	
 	TIMER1_Init(); //PWM输出
-	//TIM1_init();
+	
 	enableInterrupts();
 	while(1);
 #if 0

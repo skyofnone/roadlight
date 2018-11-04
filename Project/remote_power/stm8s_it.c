@@ -30,7 +30,32 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm8s_it.h"
 
+#define IR_CODE_0_H_MAX  2000//1600 //450           // ˝æ›¬Î0 ∏ﬂµÁ∆ΩøÌ∂»∂»
+#define IR_CODE_0_H_MIN  1000//1400
+
+#define IR_CODE_0_L_MAX 600//400//  358 //  600           // ˝æ›¬ÎµÕµÁ∆ΩøÌ∂»
+#define IR_CODE_0_L_MIN 50//200
+
+#define IR_CODE_1_H_MAX 600//400// 358 //1600          // ˝æ›¬Î1 ∏ﬂµÁ∆ΩøÌ∂»
+#define IR_CODE_1_H_MIN 50//200
+#define IR_CODE_1_L_MAX 2000//1600 // 600           // ˝æ›¬ÎµÕµÁ∆ΩøÌ∂»
+#define IR_CODE_1_L_MIN 1000//1400
+
+enum
+{
+  IR_NONE = 0,
+  IR_HEAD = 1,    	
+  IR_DATA = 2,
+  IR_CODE0 = 3,
+  IR_CODE1 = 4
+};
+
 extern u16 Cnt_system_ms;
+uint16_t PulseWidth_prev = 0;
+uint16_t PulseWidth_curr = 0;
+uint8_t irstate = 0;
+uint8_t IR_recv[4] = {0};
+uint16_t PulseWidth = 0;
 /** @addtogroup Template_Project
   * @{
   */
@@ -162,11 +187,97 @@ INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6)
   * @retval None
   */
 INTERRUPT_HANDLER(EXTI_PORTE_IRQHandler, 7)
-{
-  /* In order to detect unexpected events during development,
-     it is recommended to set a breakpoint on the following instruction.
-  */
- 
+{	
+	static uint8_t i = 0, j = 0, bitcnt = 24;
+	uint8_t error = 0, data = 0;
+	uint8_t hw = 0;
+	PulseWidth_prev = PulseWidth_curr;
+	PulseWidth_curr = TIM2_GetCounter();
+	PulseWidth = (uint16_t)(PulseWidth_curr - PulseWidth_prev);
+	memcpy(&error£¨&data, 1);
+	if(PulseWidth > 10000){
+		irstate = 1;
+	}
+	if(irstate)
+	{	
+		hw = irstate;
+		switch(irstate)
+		{
+			case 1:
+				irstate = 2;
+				break;
+			case 2:
+				if((PulseWidth > IR_CODE_1_H_MIN) && (PulseWidth < IR_CODE_1_H_MAX))
+					irstate = 3;
+				else if((PulseWidth > IR_CODE_0_H_MIN) && (PulseWidth < IR_CODE_0_H_MAX))
+					irstate = 4;
+				else
+				{
+					error = 1;
+				}
+				break;
+			case 3:
+				if((PulseWidth > IR_CODE_1_L_MIN) && (PulseWidth < IR_CODE_1_L_MAX))		//0
+				{
+					irstate = 2;
+					IR_recv[i] &= ~(1<<(7 - j));
+					++j;
+					if(j > 7) 
+					{
+						j = 0;
+						++i;
+					}
+					bitcnt--;
+					if(0 == bitcnt)
+					{
+						data = IR_recv[1];
+						bitcnt = 24;
+						irstate = 0;
+					}
+				}else{
+					error = 1;
+				}
+				break;
+			case 4:
+				if((PulseWidth > IR_CODE_0_L_MIN) && (PulseWidth < IR_CODE_0_L_MAX))		 //1
+				{
+					irstate = 2;
+					IR_recv[i] |= 1<<(7 - j);
+					++j;
+					if(j > 7) 
+					{
+						j = 0;
+						++i;
+					}
+					bitcnt--;
+					if(0 == bitcnt)
+					{
+						data = IR_recv[1];
+						bitcnt = 24;
+						irstate = 0;
+					}				
+				}
+				else
+				{
+					error = 1;
+				}
+				break;
+			default:
+				error = 1;
+				break;
+		}
+	}
+	if(error)
+	{
+		i = 0;
+		j = 0;
+		bitcnt = 24;
+		irstate = 0;
+		IR_recv[0] = 0;
+		IR_recv[1] = 0;
+		IR_recv[2] = 0;
+		IR_recv[3] = 0;		
+	}
 }
 
 #if defined (STM8S903) || defined (STM8AF622x) 
@@ -229,7 +340,7 @@ INTERRUPT_HANDLER(SPI_IRQHandler, 10)
 INTERRUPT_HANDLER(TIM1_UPD_OVF_TRG_BRK_IRQHandler, 11)
 {
 	//Cnt_system_ms++;
-	//TIM1_ClearITPendingBit(TIM1_IT_UPDATE);//Ê∏ÖÈô§Ê†áÂøó‰Ωç
+	TIM1_ClearITPendingBit(TIM1_IT_UPDATE);//Ê∏ÖÈô§Ê†áÂøó‰Ωç
   /* In order to detect unexpected events during development,
      it is recommended to set a breakpoint on the following instruction.
   */
@@ -280,7 +391,7 @@ INTERRUPT_HANDLER(TIM1_CAP_COM_IRQHandler, 12)
   */
  INTERRUPT_HANDLER(TIM2_UPD_OVF_BRK_IRQHandler, 13)
  {
-	 //TIM2_ClearITPendingBit(TIM2_IT_UPDATE);//Ê∏ÖÈô§Ê†áÂøó‰Ω?
+	TIM2_ClearITPendingBit(TIM2_IT_UPDATE);//Ê∏ÖÈô§Ê†áÂøó‰Ω?
   /* In order to detect unexpected events during development,
      it is recommended to set a breakpoint on the following instruction.
   */
